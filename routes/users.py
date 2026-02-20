@@ -30,14 +30,14 @@ async def clerk_webhook(webhook_data: dict):
         raise HTTPException(status_code=500, detail=f"Webhook processing failed : {str(e)}")
 
 
-@router.get("/get-users")
-async def get_users():
-    try:
-        result = supabase.table('users').select("*").execute()
+# @router.get("/get-users")
+# async def get_users():
+#     try:
+#         result = supabase.table('users').select("*").execute()
 
-        return {
-            "message": "Users fetched successfully",
-            "data": result.data
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch data : {str(e)}")
+#         return {
+#             "message": "Users fetched successfully",
+#             "data": result.data
+#         }
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Failed to fetch data : {str(e)}")
