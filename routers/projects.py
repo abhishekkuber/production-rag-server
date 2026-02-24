@@ -12,7 +12,7 @@ class ProjectCreate(BaseModel):
     description: str=""
 
 # API to get the projects of a user.
-@router.get("/api/projects") 
+@router.get("/api/projects")
 async def get_projects(clerk_id: str = Depends(get_current_user)): 
     try:
         result = supabase.table('projects').select("*").eq('clerk_id', clerk_id).execute()
@@ -28,7 +28,6 @@ async def get_projects(clerk_id: str = Depends(get_current_user)):
 @router.post("/api/projects")
 async def create_project(project: ProjectCreate, clerk_id=Depends(get_current_user)):
     try:
-        print("INSIDE CREATE PROJECT")
         project_result = supabase.table('projects').insert({
             "clerk_id": clerk_id,
             "name": project.name,
@@ -92,4 +91,58 @@ def delete_project(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete project : {str(e)}")
+
+# Get a certain project
+@router.get("/api/projects/{project_id}")
+def get_project(
+    project_id: str,
+    clerk_id: str=Depends(get_current_user)
+):
+    try:
+        project = supabase.table("projects").select("*").eq("id", project_id).eq("clerk_id", clerk_id).execute()
+        if not project.data:
+            raise HTTPException(status_code=404, detail=f"Project not found / Access denied : {str(e)}")
+        
+        return {
+            "message": "Project fetched successfully",
+            "data": project.data[0]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch project : {str(e)}")
+
+# Get the chats of a certain project
+@router.get("/api/projects/{project_id}/chats")
+def get_project_chats(
+    project_id: str,
+    clerk_id: str=Depends(get_current_user)
+):
+    try:
+        project_chats = supabase.table("chats").select("*").eq("project_id", project_id).eq("clerk_id", clerk_id).order("created_at", desc=True).execute()
+        # if not project_chats.data:
+        #     raise HTTPException(status_code=404, detail=f"Project chats not found / Access denied : {str(e)}")
+        
+        return {
+            "message": "Project chats fetched successfully",
+            "data": project_chats.data or []
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch project chats : {str(e)}")
     
+# Get the project settings of a certain project
+@router.get("/api/projects/{project_id}/settings")
+def get_project_settings(
+    project_id: str,
+    clerk_id: str=Depends(get_current_user)
+):
+    try:
+        # you can also skip .eq("clerk_id", clerk_id) because the project settings is sensitive data
+        project_settings = supabase.table("project_settings").select("*").eq("project_id", project_id).execute()
+        if not project_settings.data:
+            raise HTTPException(status_code=404, detail=f"Project settings not found / Access denied : {str(e)}")
+        
+        return {
+            "message": "Project settings fetched successfully",
+            "data": project_settings.data[0]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch project settings : {str(e)}")
