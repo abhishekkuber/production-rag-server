@@ -11,6 +11,19 @@ class ProjectCreate(BaseModel):
     name: str
     description: str=""
 
+class ProjectSettings(BaseModel):
+    embedding_model: str
+    rag_strategy: str
+    agent_type: str
+    chunks_per_search: int
+    final_context_size: int
+    similarity_threshold: float
+    number_of_queries: int
+    reranking_enabled: bool
+    reranking_model: str
+    vector_weight: float
+    keyword_weight: float
+
 # API to get the projects of a user.
 @router.get("/api/projects")
 async def get_projects(clerk_id: str = Depends(get_current_user)): 
@@ -131,8 +144,7 @@ def get_project_chats(
 # Get the project settings of a certain project
 @router.get("/api/projects/{project_id}/settings")
 def get_project_settings(
-    project_id: str,
-    clerk_id: str=Depends(get_current_user)
+    project_id: str
 ):
     try:
         # you can also skip .eq("clerk_id", clerk_id) because the project settings is sensitive data
@@ -146,3 +158,34 @@ def get_project_settings(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch project settings : {str(e)}")
+
+# Update the project settings of a certain project
+@router.put("/api/projects/{project_id}/settings")
+def update_project_setting(
+    project_id: str,
+    settings: ProjectSettings,
+    clerk_id: str=Depends(get_current_user)
+):
+    try:
+        # First verify if the project exists and belongs to the user
+        # We dont need to return all of the columns
+        result = supabase.table("projects").select("id").eq("id", project_id).eq("clerk_id", clerk_id).execute()
+        
+        if not result.data:
+            raise HTTPException(status_code=404, detail=f"Project settings not found / Access denied : {str(e)}")
+        
+        # convert the pydantic model to a dictionary 
+        update_result = supabase.table("project_settings").update(settings.model_dump()).eq("project_id", project_id).execute()
+        if not update_result.data:
+            raise HTTPException(status_code=404, detail=f"Project settings not found / Access denied : {str(e)}")
+        
+        return {
+            "message": "Project settings updated successfully", 
+            "data": update_result.data[0]
+        }
+        
+        # convert the pydantic model to a dictionary
+
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update project settings : {str(e)}")

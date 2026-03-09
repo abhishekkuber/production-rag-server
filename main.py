@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import users, projects, files, chats
+from routes import users, projects, files, chats
 from dotenv import load_dotenv
 import os
 
