@@ -1,10 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import users, projects, files, chats
-from dotenv import load_dotenv
-import os
+from src.routes.files import router as file_routes
+from src.routes.users import router as user_routes
+from src.routes.chats import router as chat_routes
+from src.routes.projects import router as project_routes
 
-load_dotenv()
+from src.config.index import app_config
 
 
 # Create FastAPI app
@@ -17,29 +18,25 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(users.router)
-app.include_router(projects.router)
-app.include_router(files.router)
-app.include_router(chats.router)
+app.include_router(user_routes, prefix="/api/users")
+app.include_router(project_routes, prefix="/api/projects")
+app.include_router(file_routes, prefix="/api/projects")
+app.include_router(chat_routes, prefix="/api/chats")
 
 # Health check endpoints
 @app.get("/")
-async def root():
+def root():
     return {"message": "Production Ready RAG API is up and running!"}
 
 @app.get("/health")
-async def health_check():
+def health_check():
     return {
         "status": "healthy",
         "version": "1.0.0"
     }
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
