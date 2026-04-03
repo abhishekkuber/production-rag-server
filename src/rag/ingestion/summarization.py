@@ -1,10 +1,12 @@
-from src.rag.ingestion.db import update_document_status_in_db
 from src.models.index import ProcessingStatus
 from src.services.llm import open_ai_models
 from langchain_core.messages import HumanMessage
 
 def summarise_chunks(chunks, document_id):
     """Process all chunks with AI summaries"""
+    # Local import avoids circular import during module initialization.
+    from src.rag.ingestion.index import update_document_status_in_db
+
     processed_chunks = []
     total_chunks = len(chunks)
 

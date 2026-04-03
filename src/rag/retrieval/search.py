@@ -8,6 +8,7 @@ from typing import List
 
 
 def vector_search(user_query, document_ids, project_settings):
+    from src.rag.retrieval.index import logger
     query_embedding = open_ai_models['embedding_model'].embed_query(user_query)
     vector_search_results = supabase.rpc(
         fn="vector_search_document_chunks",
@@ -18,12 +19,16 @@ def vector_search(user_query, document_ids, project_settings):
             "chunks_per_search": project_settings['chunks_per_search'],
         }
     ).execute()
+    vector_chunks = vector_search_results.data if vector_search_results.data else []
+    logger.info("vector_search_results", vector_count=len(vector_chunks))
 
-    return vector_search_results.data if vector_search_results.data else []
+    return vector_chunks
 
 def hybrid_search(user_query, document_ids, project_settings):
+    from src.rag.retrieval.index import logger
     vector_search_chunks = vector_search(user_query, document_ids, project_settings)
     keyword_search_chunks = _keyword_search(user_query, document_ids, project_settings)
+    logger.info("hybrid_search_results", vector_count=len(vector_search_chunks), keyword_count=len(keyword_search_chunks))
 
     # Combine using Reciprocal Rank Fusion
     return reciprocal_rank_fusion(
@@ -32,24 +37,31 @@ def hybrid_search(user_query, document_ids, project_settings):
     )
 
 def multi_query_vector_search(user_query, document_ids, project_settings):
+    from src.rag.retrieval.index import logger
     queries = _generate_query_variations(user_query, project_settings['number_of_queries'])
+    logger.info("query_variations_generated", query_count=len(queries))
     all_results = []
     for i, query in enumerate(queries):
         results = vector_search(query, document_ids, project_settings)
-        print(f"Query {i+1}: {query}\nReturned {len(results)} chunks\n\n")
+        logger.info("multi_query_vector_variation_search", query_num=f"{i+1}/{len(queries)}", query=query, chunks_found=len(results))
         all_results.append(results)
     chunks = reciprocal_rank_fusion(all_results)
+    logger.info("multi_query_vector_search_results", final_chunks_count=len(chunks))
     return chunks
 
 
 def multi_query_hybrid_search(user_query, document_ids, project_settings):
+    from src.rag.retrieval.index import logger
     queries = _generate_query_variations(user_query, project_settings['number_of_queries'])
+    logger.info("query_variations_generated", query_count=len(queries))
     all_results = []
     for i, query in enumerate(queries):
         results = hybrid_search(query, document_ids, project_settings)
         print(f"Query {i+1}: {query}\nReturned {len(results)} chunks\n\n")
+        logger.info("multi_query_hybrid_variation_search", query_num=f"{i+1}/{len(queries)}", query=query, chunks_found=len(results))
         all_results.append(results)
     chunks = reciprocal_rank_fusion(all_results)
+    logger.info("multi_query_hybrid_search_results", final_chunks_count=len(chunks))
     return chunks
 
 

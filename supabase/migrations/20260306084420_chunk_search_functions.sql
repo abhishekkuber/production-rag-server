@@ -1,3 +1,4 @@
+-- Vector Search --
 CREATE OR REPLACE FUNCTION vector_search_document_chunks(
     query_embedding vector, 
     filter_document_ids uuid[], 
@@ -42,10 +43,8 @@ LIMIT
 $function$;
 
 
--- Keyword search function 
--- DO NOT REMOVE THIS BELOW CODE. KEEP THIS IN THE SAME FILE AND RUN THE MIGRATION TOGETHER. 
--- WE WILL COVER KEYWORD SEARCH IN THE NEXT SECTION
 
+-- Keyword Search --
 CREATE OR REPLACE FUNCTION keyword_search_document_chunks(
     query_text text, 
     filter_document_ids uuid[], 

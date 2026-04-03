@@ -5,6 +5,7 @@ def vectorize_and_store_chunks_in_db(document_id, processed_chunks):
     """
         Generate embeddings and store chunks in one efficient operation
     """
+    from src.rag.ingestion.index import logger  
 
     if not processed_chunks:
         print("No chunks to process")
@@ -15,6 +16,7 @@ def vectorize_and_store_chunks_in_db(document_id, processed_chunks):
     # Generate embeddings in batches to avoid API limits
     batch_size = 10
     all_embeddings = []
+    logger.info("vectorization_started", document_id=document_id, total_chunks=len(processed_chunks), batch_size=batch_size)
     for i in range(0, len(texts), batch_size): 
         batch_texts = texts[i:i+batch_size]
         batch_embeddings = open_ai_models["embedding_model"].embed_documents(batch_texts)

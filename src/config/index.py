@@ -48,4 +48,8 @@ app_config = {
     "scrapingbee_api_key": os.getenv("SCRAPINGBEE_API_KEY"),
     "hf_api_key": os.getenv("HF_TOKEN"),
     "cohere_api_key": os.getenv("COHERE_API_KEY"),
+    "langsmith_tracing": os.getenv("LANGSMITH_TRACING"),
+    "langsmith_endpoint": os.getenv("LANGSMITH_ENDPOINT"),
+    "langsmith_api_key": os.getenv("LANGSMITH_API_KEY"),
+    "langsmith_project": os.getenv("LANGSMITH_PROJECT"),
 }

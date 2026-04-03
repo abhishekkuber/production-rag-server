@@ -13,3 +13,7 @@ echo "Stopping Redis Server..."
 echo "Stopping the server..."
 pkill -f "uvicorn src.server:app" || echo "No uvicorn process found"
 echo "Server stopped"
+
+echo "Stopping the local Supabase server"
+supabase stop
+echo "Supabase server stopped"

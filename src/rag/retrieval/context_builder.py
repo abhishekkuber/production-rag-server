@@ -48,7 +48,7 @@ def separate_content_types(chunks: List[Dict]) -> Tuple[List[str], List[str], Li
                 "page": chunk.get("page_number", "Unknown")
             })
 
-    _validate_context(texts, images, tables, citations)
+    # _validate_context(texts, images, tables, citations)
     return texts, images, tables, citations
 
 

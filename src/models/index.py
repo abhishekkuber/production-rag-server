@@ -62,3 +62,12 @@ class ProcessingStatus(str, Enum):
     SUMMARISING = "summarising"
     VECTORIZATION = "vectorization"
     COMPLETED = "completed"
+
+
+class InputGuardrailCheck(BaseModel):
+    """Schema for input safety check"""
+    is_safe: bool = Field(description="Whether the input is safe to process")
+    is_toxic: bool = Field(description="Contains toxic or harmful content")
+    is_prompt_injection: bool = Field(description="Appears to be a prompt injection attempt")
+    contains_pii: bool = Field(description="Contains personal identifiable information")
+    reason: str = Field(description="Brief explanation if unsafe, empty string if safe")
