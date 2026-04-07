@@ -18,7 +18,8 @@ logger.info("initializing_application", version="1.0.0")
 app = FastAPI(
     title="Production Ready RAG API",
     description="Backend API for Production Ready RAG API",
-    version="1.0.0"
+    version="1.0.0",
+    redirect_slashes=False
 )
 
 # Add logging middleware (should be first to capture all requests)
@@ -45,7 +46,11 @@ logger.info("routes_registered", route_count=4)
 # Health check endpoints
 @app.get("/")
 def root():
-    return {"message": "Production Ready RAG API is up and running!"}
+    return {
+        "name": "Production RAG API",
+        "status": "running",
+        "version": "1.0.0"
+    }
 
 @app.get("/health")
 def health_check():
