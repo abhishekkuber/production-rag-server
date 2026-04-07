@@ -19,7 +19,7 @@ app = FastAPI(
     title="Production Ready RAG API",
     description="Backend API for Production Ready RAG API",
     version="1.0.0",
-    redirect_slashes=False
+    redirect_slashes=True
 )
 
 # Add logging middleware (should be first to capture all requests)
