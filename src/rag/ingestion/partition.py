@@ -39,7 +39,7 @@ def download_and_partition(document_id: str, document: dict):
                 f.write(response.content)
 
             logger.info("url_crawl_completed", document_id=document_id)
-            
+             
             elements = partition_document(temp_file_path, "html", source_type="url")
 
         else:

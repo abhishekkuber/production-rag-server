@@ -12,7 +12,7 @@ router = APIRouter(
 
 
 # Create a chat
-@router.post("/")
+@router.post("")
 async def create_chat(
     chat: ChatCreate,
     clerk_id: str=Depends(get_current_user_clerk_id)

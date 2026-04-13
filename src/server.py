@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.routes.files import router as file_routes
 from src.routes.users import router as user_routes
 from src.routes.chats import router as chat_routes
+from src.routes.feedback import router as feedback_routes
 from src.routes.projects import router as project_routes
 from src.config.logging import configure_logging, get_logger
 from src.middleware.logging_middleware import LoggingMiddleware
@@ -40,6 +41,7 @@ app.include_router(user_routes, prefix="/api/users")
 app.include_router(project_routes, prefix="/api/projects")
 app.include_router(file_routes, prefix="/api/projects")
 app.include_router(chat_routes, prefix="/api/chats")
+app.include_router(feedback_routes, prefix="/api/feedback")
 
 logger.info("routes_registered", route_count=4)
 

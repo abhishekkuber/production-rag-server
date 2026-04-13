@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from src.services.database import supabase
 from src.services.auth import get_current_user_clerk_id
 from src.models.index import ProjectCreate, ProjectSettings, SendMessageRequest, MessageRole
 from src.agents.simple_agent.agent import create_simple_rag_agent
 from src.agents.supervisor_agent.agent import create_supervisor_agent
+from src.services.rate_limit import enforce_daily_message_limit, get_daily_message_quota
 from typing import List, Dict
 from src.config.logging import get_logger, set_project_id, set_user_id
 
@@ -38,7 +39,7 @@ router = APIRouter(
 """
 
 
-@router.get("/")
+@router.get("")
 async def get_projects(clerk_id: str = Depends(get_current_user_clerk_id)): 
     set_user_id(clerk_id)
     try:
@@ -54,7 +55,7 @@ async def get_projects(clerk_id: str = Depends(get_current_user_clerk_id)):
         raise HTTPException(status_code=500, detail=f"Failed to get projects. Reason: {str(e)}")
 
 
-@router.post("/")
+@router.post("")
 async def create_project(project: ProjectCreate, clerk_id=Depends(get_current_user_clerk_id)):
     set_user_id(clerk_id)
     try:
@@ -104,6 +105,20 @@ async def create_project(project: ProjectCreate, clerk_id=Depends(get_current_us
     except Exception as e:
         logger.error("project_creation_error", name=project.name, error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=f"Project creation failed. Reason: {str(e)}")
+
+
+@router.get("/quota/messages")
+async def get_message_quota(clerk_id: str = Depends(get_current_user_clerk_id)):
+    set_user_id(clerk_id)
+    try:
+        quota = get_daily_message_quota(clerk_id=clerk_id, daily_limit=20)
+        return {
+            "message": "Message quota fetched successfully",
+            "data": quota,
+        }
+    except Exception as e:
+        logger.error("message_quota_fetch_failed", error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to fetch message quota. Reason: {str(e)}")
     
 
 @router.delete("/{project_id}") # delete the project based on the project id
@@ -366,6 +381,7 @@ async def send_message(
     project_id: str,
     chat_id: str,
     message: SendMessageRequest,
+    response: Response,
     clerk_id: str = Depends(get_current_user_clerk_id),
 ):
     """
@@ -381,6 +397,14 @@ async def send_message(
     set_user_id(clerk_id)
     try:
         logger.info("sending_message", chat_id=chat_id)
+
+        # Enforce hard daily cap before any model/tool invocation.
+        quota = enforce_daily_message_limit(clerk_id=clerk_id, daily_limit=20)
+        response.headers["X-RateLimit-Limit"] = str(quota["limit"])
+        response.headers["X-RateLimit-Remaining"] = str(quota["remaining"])
+        response.headers["X-RateLimit-Used"] = str(quota["used"])
+        response.headers["X-RateLimit-Reset"] = str(quota["reset_in_seconds"])
+
         # Step 1 : Insert the message into the database.
         message_content = message.content
         message_insert_data = {
@@ -402,6 +426,7 @@ async def send_message(
         # Step 2 : Get project settings to retrieve agent_type
         try:
             project_settings = get_project_settings(project_id)
+            print(project_settings)
             agent_type = project_settings["data"].get("agent_type", "simple")
         except Exception as e:
             # Default to "simple" if settings retrieval fails
@@ -489,6 +514,8 @@ async def stream_message(
 
     set_project_id(project_id)  
     set_user_id(clerk_id)  
+
+    quota = enforce_daily_message_limit(clerk_id=clerk_id, daily_limit=20)
     
     async def event_generator():
         try:
@@ -516,7 +543,7 @@ async def stream_message(
             
             # Step 2: Get project settings for agent_type
             try:
-                project_settings = await get_project_settings(project_id)
+                project_settings = get_project_settings(project_id)
                 agent_type = project_settings["data"].get("agent_type", "simple")
             except Exception as e:
                 logger.warning("settings_retrieval_failed_defaulting_to_simple", error=str(e))
@@ -574,21 +601,25 @@ async def stream_message(
                             yield f"event: token\ndata: {json.dumps({'content': rejection_content})}\n\n"
                     else:
                         passed_guardrail = True
-                        yield f"event: status\ndata: {json.dumps({'status': 'Thinking...'})}\n\n"
+                        yield f"event: status\ndata: {json.dumps({'status': 'Bide a moment whilst I ponder...'})}\n\n"
+                        # yield f"event: status\ndata: {json.dumps({'status': 'Thinking...'})}\n\n"
                 
                 # Status updates for tool calls
                 elif kind == "on_tool_start":
                     tool_called = True
                     tool_name = name
                     if tool_name == "rag_search":
-                        yield f"event: status\ndata: {json.dumps({'status': 'Searching documents...'})}\n\n"
+                        # yield f"event: status\ndata: {json.dumps({'status': 'Searching documents...'})}\n\n"
+                        yield f"event: status\ndata: {json.dumps({'status': 'Perusing the dusty scrolls...'})}\n\n"
                     elif tool_name == "search_web":
-                        yield f"event: status\ndata: {json.dumps({'status': 'Searching the web...'})}\n\n"
+                        # yield f"event: status\ndata: {json.dumps({'status': 'Searching the web...'})}\n\n"
+                        yield f"event: status\ndata: {json.dumps({'status': 'Seeking tidings from the web...'})}\n\n"
                 
                 # Detect when tool ends - next model call will be the final response
                 elif kind == "on_tool_end":
                     is_final_response = True
-                    yield f"event: status\ndata: {json.dumps({'status': 'Generating response...'})}\n\n"
+                    yield f"event: status\ndata: {json.dumps({'status': 'Inking the final sonnet...'})}\n\n"
+                    # yield f"event: status\ndata: {json.dumps({'status': 'Generating response...'})}\n\n"
                 
                 # Stream tokens from the model
                 elif kind == "on_chat_model_stream":
@@ -646,5 +677,9 @@ async def stream_message(
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
+            "X-RateLimit-Limit": str(quota["limit"]),
+            "X-RateLimit-Remaining": str(quota["remaining"]),
+            "X-RateLimit-Used": str(quota["used"]),
+            "X-RateLimit-Reset": str(quota["reset_in_seconds"]),
         }
     )

@@ -71,3 +71,11 @@ class InputGuardrailCheck(BaseModel):
     is_prompt_injection: bool = Field(description="Appears to be a prompt injection attempt")
     contains_pii: bool = Field(description="Contains personal identifiable information")
     reason: str = Field(description="Brief explanation if unsafe, empty string if safe")
+
+
+class FeedbackRequest(BaseModel):
+    message_id: str=Field(..., description="The ID of the message to which the user is giving feedback")
+    rating: str=Field(..., description="Whether the rating is a like or a dislike")
+    category: Optional[str]=Field(None, description="What is the user feedback about the message")
+    comment: Optional[str]=Field(None, description="Extra comments about the feedback")
+    project_id: str=Field(..., description="The project in which the message is")

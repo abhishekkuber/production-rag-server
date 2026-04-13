@@ -62,7 +62,7 @@ def perform_rag_ingestion(document_id: str):
     try:
         process_document_result = process_document(document_id)
         logger.info("document_processed_successfully", document_id=process_document_result.get("document_id"), chunks_created=process_document_result.get("chunks_created"))
-        return (f"Document {process_document_result[document_id]} processed successfully.")
+        return f"Document {process_document_result.get('document_id')} processed successfully."
     except Exception as e:
         logger.error("document_processing_failed", document_id=document_id, error=str(e), exc_info=True)
         return f"Failed to process document {document_id}: {str(e)}"
