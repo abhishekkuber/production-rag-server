@@ -1,4 +1,4 @@
-# KnowledgeDock
+# [KnowledgeDock](https://production-rag-client.vercel.app/)
 
 KnowledgeDock is a project-scoped knowledge assistant. Users create projects, add documents or URLs, and ask questions against that project knowledge. The system ingests content in the background, retrieves relevant context, and returns grounded answers with citations through a chat interface.
 
