@@ -12,6 +12,7 @@ from src.config.logging import get_logger, set_project_id, set_user_id
 from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse
 from typing import Optional
+from langchain_core.tracers.context import collect_runs
 import json
 
 
@@ -574,75 +575,82 @@ async def stream_message(
             # Step 5: Stream the agent response
             full_response = ""
             citations = []
-            
+            trace_id = None
+
             # Track state to know when we're in the final response
             passed_guardrail = False
             tool_called = False
             is_final_response = False
-            
-            async for event in agent.astream_events(
-                {"messages": [{"role": "user", "content": message_content}]},
-                version="v2"
-            ):
-                kind = event["event"]
-                tags = event.get("tags", [])
-                name = event.get("name", "")
-                
-                # Detect guardrail completion
-                if kind == "on_chain_end" and name == "guardrail":
-                    # Check if guardrail rejected the input
-                    output = event.get("data", {}).get("output", {})
-                    if output.get("guardrail_passed") == False:
-                        # Stream the rejection message
-                        messages = output.get("messages", [])
-                        if messages:
-                            rejection_content = messages[0].content if hasattr(messages[0], 'content') else str(messages[0])
-                            full_response = rejection_content
-                            yield f"event: token\ndata: {json.dumps({'content': rejection_content})}\n\n"
-                    else:
-                        passed_guardrail = True
-                        yield f"event: status\ndata: {json.dumps({'status': 'Bide a moment whilst I ponder...'})}\n\n"
-                        # yield f"event: status\ndata: {json.dumps({'status': 'Thinking...'})}\n\n"
-                
-                # Status updates for tool calls
-                elif kind == "on_tool_start":
-                    tool_called = True
-                    tool_name = name
-                    if tool_name == "rag_search":
-                        # yield f"event: status\ndata: {json.dumps({'status': 'Searching documents...'})}\n\n"
-                        yield f"event: status\ndata: {json.dumps({'status': 'Perusing the dusty scrolls...'})}\n\n"
-                    elif tool_name == "search_web":
-                        # yield f"event: status\ndata: {json.dumps({'status': 'Searching the web...'})}\n\n"
-                        yield f"event: status\ndata: {json.dumps({'status': 'Seeking tidings from the web...'})}\n\n"
-                
-                # Detect when tool ends - next model call will be the final response
-                elif kind == "on_tool_end":
-                    is_final_response = True
-                    yield f"event: status\ndata: {json.dumps({'status': 'Inking the final sonnet...'})}\n\n"
-                    # yield f"event: status\ndata: {json.dumps({'status': 'Generating response...'})}\n\n"
-                
-                # Stream tokens from the model
-                elif kind == "on_chat_model_stream":
-                    # Stream if:
-                    # 1. Guardrail passed AND
-                    # 2. Either tool finished OR no tool was called yet AND
-                    # 3. Has the seq:step:1 tag (part of main agent flow, not nested LLM)
-                    if passed_guardrail and (is_final_response or not tool_called) and 'seq:step:1' in tags:
-                        chunk = event["data"].get("chunk")
-                        if chunk:
-                            content = chunk.content if hasattr(chunk, 'content') else ""
-                            if content:
-                                full_response += content
-                                yield f"event: token\ndata: {json.dumps({'content': content})}\n\n"
-                
-                # Capture citations from the final state
-                elif kind == "on_chain_end" and name == "LangGraph" and tags == []:
-                    # This is the outermost LangGraph ending
-                    output = event.get("data", {}).get("output", {})
-                    if isinstance(output, dict) and "citations" in output:
-                        citations = output["citations"]
-            
+
+            with collect_runs() as runs_cb:
+                async for event in agent.astream_events(
+                    {"messages": [{"role": "user", "content": message_content}]},
+                    version="v2"
+                ):
+                    kind = event["event"]
+                    tags = event.get("tags", [])
+                    name = event.get("name", "")
+
+                    # Detect guardrail completion
+                    if kind == "on_chain_end" and name == "guardrail":
+                        # Check if guardrail rejected the input
+                        output = event.get("data", {}).get("output", {})
+                        if output.get("guardrail_passed") == False:
+                            # Stream the rejection message
+                            messages = output.get("messages", [])
+                            if messages:
+                                rejection_content = messages[0].content if hasattr(messages[0], 'content') else str(messages[0])
+                                full_response = rejection_content
+                                yield f"event: token\ndata: {json.dumps({'content': rejection_content})}\n\n"
+                        else:
+                            passed_guardrail = True
+                            yield f"event: status\ndata: {json.dumps({'status': 'Bide a moment whilst I ponder...'})}\n\n"
+                            # yield f"event: status\ndata: {json.dumps({'status': 'Thinking...'})}\n\n"
+
+                    # Status updates for tool calls
+                    elif kind == "on_tool_start":
+                        tool_called = True
+                        tool_name = name
+                        if tool_name == "rag_search":
+                            # yield f"event: status\ndata: {json.dumps({'status': 'Searching documents...'})}\n\n"
+                            yield f"event: status\ndata: {json.dumps({'status': 'Perusing the dusty scrolls...'})}\n\n"
+                        elif tool_name == "search_web":
+                            # yield f"event: status\ndata: {json.dumps({'status': 'Searching the web...'})}\n\n"
+                            yield f"event: status\ndata: {json.dumps({'status': 'Seeking tidings from the web...'})}\n\n"
+
+                    # Detect when tool ends - next model call will be the final response
+                    elif kind == "on_tool_end":
+                        is_final_response = True
+                        yield f"event: status\ndata: {json.dumps({'status': 'Inking the final sonnet...'})}\n\n"
+                        # yield f"event: status\ndata: {json.dumps({'status': 'Generating response...'})}\n\n"
+
+                    # Stream tokens from the model
+                    elif kind == "on_chat_model_stream":
+                        # Stream if:
+                        # 1. Guardrail passed AND
+                        # 2. Either tool finished OR no tool was called yet AND
+                        # 3. Has the seq:step:1 tag (part of main agent flow, not nested LLM)
+                        if passed_guardrail and (is_final_response or not tool_called) and 'seq:step:1' in tags:
+                            chunk = event["data"].get("chunk")
+                            if chunk:
+                                content = chunk.content if hasattr(chunk, 'content') else ""
+                                if content:
+                                    full_response += content
+                                    yield f"event: token\ndata: {json.dumps({'content': content})}\n\n"
+
+                    # Capture citations from the final state
+                    elif kind == "on_chain_end" and name == "LangGraph" and tags == []:
+                        # This is the outermost LangGraph ending
+                        output = event.get("data", {}).get("output", {})
+                        if isinstance(output, dict) and "citations" in output:
+                            citations = output["citations"]
+
+                # The first collected run is the root run; its id is the LangSmith trace id.
+                if runs_cb.traced_runs:
+                    trace_id = str(runs_cb.traced_runs[0].id)
+
             logger.info("agent_invocation_completed", chat_id=chat_id, response_length=len(full_response), citations_count=len(citations))  # Added: Completion log
+            logger.info("trace_captured", chat_id=chat_id, trace_id=trace_id)
             
             # Step 6: Insert AI response into database
             ai_response_insert_data = {
@@ -651,6 +659,7 @@ async def stream_message(
                 "clerk_id": clerk_id,
                 "role": MessageRole.ASSISTANT.value,
                 "citations": citations,
+                "trace_id": trace_id,
             }
             ai_response_creation_result = (
                 supabase.table("messages").insert(ai_response_insert_data).execute()

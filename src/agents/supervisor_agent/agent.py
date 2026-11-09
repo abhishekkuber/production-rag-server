@@ -348,6 +348,98 @@ For every user question:
 # WEB SEARCH AGENT
 # =============================================================================
 
+def format_web_results(results: List[Dict[str, Any]]) -> str:
+    """
+    Format Tavily search results into a text blob for the LLM to synthesize.
+
+    Args:
+        results: List of Tavily result dicts (each with title, url, content)
+
+    Returns:
+        A readable string combining title, url, and content snippet per result
+    """
+    blocks = []
+    for r in results:
+        title = r.get("title") or r.get("url") or "Untitled"
+        url = r.get("url", "")
+        content = r.get("content", "")
+        blocks.append(f"Title: {title}\nURL: {url}\nContent: {content}")
+    return "\n\n".join(blocks)
+
+
+def create_web_search_tool(search_tool):
+    """
+    Create a web search tool that captures source citations.
+
+    This wraps the Tavily search tool so that each result's URL and title are
+    accumulated into the citations state (mirroring the RAG tool), while the
+    result content is passed to the agent's LLM for synthesis.
+
+    Args:
+        search_tool: A configured TavilySearch instance
+
+    Returns:
+        A LangChain tool that returns a Command updating messages and citations
+    """
+
+    @tool
+    def web_search(
+        query: str,
+        tool_call_id: Annotated[str, InjectedToolCallId],
+    ) -> Command:
+        """
+        Search the internet for current information using web search.
+        Retrieves relevant results and captures their source URLs as citations.
+
+        Args:
+            query: The search query to find relevant information
+            tool_call_id: Injected tool call ID for message tracking
+
+        Returns:
+            A Command object with updated messages and citations
+        """
+        try:
+            raw = search_tool.invoke({"query": query})
+            results = raw.get("results", []) if isinstance(raw, dict) else []
+
+            citations, seen = [], set()
+            for r in results:
+                url = r.get("url")
+                if not url or url in seen:
+                    continue
+                seen.add(url)
+                citations.append({
+                    "type": "web",
+                    "title": r.get("title") or url,
+                    "url": url,
+                })
+
+            content = format_web_results(results) if results else "No relevant web results found."
+
+            return Command(
+                update={
+                    "messages": [
+                        ToolMessage(content=content, tool_call_id=tool_call_id)
+                    ],
+                    "citations": citations,
+                }
+            )
+
+        except Exception as e:
+            return Command(
+                update={
+                    "messages": [
+                        ToolMessage(
+                            f"Error retrieving web results: {str(e)}",
+                            tool_call_id=tool_call_id,
+                        )
+                    ]
+                }
+            )
+
+    return web_search
+
+
 def create_web_search_agent(model: str = "gpt-4o-mini", use_tavily: bool = True):
     """
     Create an agent with web search capabilities.
@@ -366,12 +458,11 @@ def create_web_search_agent(model: str = "gpt-4o-mini", use_tavily: bool = True)
     """
     # Choose search tool based on availability
     if use_tavily and os.getenv("TAVILY_API_KEY"):
-        search_tool = TavilySearch(max_results=5, search_depth="advanced")
+        # Wrap Tavily so result URLs/titles are captured as citations
+        tools = [create_web_search_tool(TavilySearch(max_results=5, search_depth="advanced"))]
     else:
-        # Use DuckDuckGo as free alternative
-        search_tool = DuckDuckGoSearchRun()
-    
-    tools = [search_tool]
+        # Use DuckDuckGo as free alternative (unstructured output, no citations)
+        tools = [DuckDuckGoSearchRun()]
 
     current_date = datetime.now().strftime("%B %d, %Y")
     
@@ -481,32 +572,48 @@ def create_supervisor_tools(project_id: str, model: str = "gpt-4o-mini"):
         )
     
     @tool
-    def search_web(query: str) -> str:
+    def search_web(
+        query: str,
+        tool_call_id: Annotated[str, InjectedToolCallId],
+    ) -> Command:
         """Search the internet for current information.
-        
+
         Use this when the user asks about:
         - Current events or recent news
         - General knowledge not in project documents
         - External information or public data
         - Market trends or industry news
         - Any information that requires up-to-date web sources
-        
+
         Args:
             query: Natural language query for web search
-            
+            tool_call_id: Injected tool call ID for message tracking
+
         Returns:
-            Relevant information from web search results
+            Command with relevant information from web search results and citations
         """
         result = web_agent.invoke({
             "messages": [{"role": "user", "content": query}]
         })
-        
+
         # Extract the final response
         final_message = result["messages"][-1]
-        if hasattr(final_message, 'content'):
-            return final_message.content
-        return str(final_message)
-    
+        content = final_message.content if hasattr(final_message, 'content') else str(final_message)
+        citations = result.get("citations", [])
+
+        # Return Command that updates both messages AND citations
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content=content,
+                        tool_call_id=tool_call_id
+                    )
+                ],
+                "citations": citations  # Propagate web citations to supervisor state
+            }
+        )
+
     return [rag_search, search_web]
 
 
