@@ -104,9 +104,9 @@ Upload a file to S3, register it in project_documents, and queue asynchronous in
 
 ## Implementation Reference
 
-- Route: server/src/routes/files.py
+- Route: src/routes/files.py
 
 ## Related Docs
 
-- [Server README](../README.md)
+- [Server README](../../README.md)
 - [API Endpoints](../API_ENDPOINTS.md)

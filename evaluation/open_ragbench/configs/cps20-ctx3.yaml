@@ -1,0 +1,10 @@
+# (2) Chunks given to the generator: 3 instead of 5, on the cps20 candidate pool.
+# The ranked list is the same as cps20, so Hit@k and MRR match cps20; only context hit and
+# the Ragas scores (and tokens) change. Must generate to be useful. Compare with cps20.
+description: 20 search candidates, rerank, 3 chunks in context
+split: dev
+retrieval_only: false
+guardrail: false
+settings:
+  chunks_per_search: 20
+  final_context_size: 3

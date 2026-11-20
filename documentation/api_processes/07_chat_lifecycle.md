@@ -12,6 +12,7 @@ Create chats, retrieve message history, send user messages to agents, and persis
 | GET    | /api/chats/{chat_id}                                                     | JWT required                                | Load chat + messages |
 | DELETE | /api/chats/{chat_id}                                                     | JWT required                                | Delete chat          |
 | POST   | /api/projects/{project_id}/chats/{chat_id}/messages/stream?clerk_id=<id> | Query clerk_id (no JWT dependency in route) | Streaming SSE path   |
+| POST   | /api/projects/{project_id}/chats/{chat_id}/messages                      | JWT required                                | Non-streaming path   |
 
 ## 7A: Create Chat
 
@@ -66,13 +67,22 @@ Create chats, retrieve message history, send user messages to agents, and persis
 
 ### Backend Sequence
 
-1. Save user message.
-2. Resolve agent_type from settings.
-3. Load chat history.
-4. Stream agent events via astream_events.
-5. Accumulate full final response and citations.
-6. Save assistant message.
-7. Emit done event.
+1. Check the daily message quota (20 per day); return 429 when it is used up.
+2. Save user message.
+3. Resolve agent_type from settings.
+4. Load chat history (last 10 messages).
+5. Stream agent events via astream_events. The agent model on this route is `gpt-4o`.
+6. Accumulate full final response and citations.
+7. Save assistant message with its LangSmith trace id.
+8. Emit done event.
+
+## 7D: Send Message (Non-Streaming)
+
+| Method | Path                                                |
+| ------ | --------------------------------------------------- |
+| POST   | /api/projects/{project_id}/chats/{chat_id}/messages |
+
+Same request body and the same steps as 7C, but it verifies the JWT, runs the agent with `gpt-4o-mini`, and returns the saved user and assistant messages in one JSON response. The UI doesn't use it.
 
 ## 7E: Delete Chat
 
@@ -88,10 +98,10 @@ Create chats, retrieve message history, send user messages to agents, and persis
 
 ## Implementation Reference
 
-- Chat routes: server/src/routes/chats.py
-- Message routes: server/src/routes/projects.py
+- Chat routes: src/routes/chats.py
+- Message routes: src/routes/projects.py
 
 ## Related Docs
 
-- [Server README](../README.md)
+- [Server README](../../README.md)
 - [API Endpoints](../API_ENDPOINTS.md)

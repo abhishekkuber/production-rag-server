@@ -1,0 +1,10 @@
+# Hybrid with equal weights, to see whether keyword search deserves more say.
+description: hybrid search (vector 0.5 / keyword 0.5), 20 candidates
+split: dev
+retrieval_only: true
+guardrail: false
+settings:
+  rag_strategy: hybrid
+  chunks_per_search: 20
+  vector_weight: 0.5
+  keyword_weight: 0.5

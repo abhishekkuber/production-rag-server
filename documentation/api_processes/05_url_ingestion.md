@@ -52,9 +52,9 @@ Ingest webpage content directly without S3 upload.
 
 ## Implementation Reference
 
-- Route: server/src/routes/files.py
+- Route: src/routes/files.py
 
 ## Related Docs
 
-- [Server README](../README.md)
+- [Server README](../../README.md)
 - [API Endpoints](../API_ENDPOINTS.md)

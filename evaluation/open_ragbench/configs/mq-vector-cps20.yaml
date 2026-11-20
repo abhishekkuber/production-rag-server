@@ -1,0 +1,11 @@
+# Multi-query: the app's default LLM writes query variations, each searched and fused by RRF.
+# Aimed at abstractive and image questions, whose wording differs from the chunk text.
+# Costs one extra gpt-4o-mini call and a few embedding calls per question.
+description: multi-query vector search (5 queries), 20 candidates
+split: dev
+retrieval_only: true
+guardrail: false
+settings:
+  rag_strategy: multi-query-vector
+  number_of_queries: 5
+  chunks_per_search: 20

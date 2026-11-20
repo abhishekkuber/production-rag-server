@@ -1,9 +1,9 @@
 [project]
 name = "server"
 version = "0.1.0"
-description = ""
+description = "KnowledgeDock API server: project-scoped RAG with FastAPI, Celery and pgvector"
 authors = [
-    {name = "Your Name",email = "you@example.com"}
+    {name = "Abhishek Kuber"}
 ]
 requires-python = ">=3.11,<4.0"
 dependencies = [
@@ -22,15 +22,32 @@ dependencies = [
     "langchain-huggingface (==1.2.0)",
     "sentence-transformers (>=5.2.3,<6.0.0)",
     "langchain-openai (>=1.1.10,<2.0.0)",
-    "ipykernel (>=7.2.0,<8.0.0)",
     "ddgs (>=9.9.1,<10.0.0)",
     "langchain-tavily (>=0.2.13,<0.3.0)",
     "openai (>=2.30.0,<3.0.0)",
-    "ragas (>=0.4.3,<0.5.0)",
     "structlog (>=25.5.0,<26.0.0)",
     "cohere (>=6.1.0,<7.0.0)"
 ]
 
+
+# Only needed for the offline evaluation in evaluation/. Install with: poetry install --with eval
+[tool.poetry.group.eval]
+optional = true
+
+[tool.poetry.group.eval.dependencies]
+ragas = ">=0.4.3,<0.5.0"
+pyyaml = ">=6.0.3,<7.0.0"
+scipy = ">=1.17.1,<2.0.0"
+tiktoken = ">=0.12.0,<0.13.0"
+numpy = ">=2.4.2,<3.0.0"
+pillow = ">=12.1.1,<13.0.0"
+
+# Notebooks only. Install with: poetry install --with dev
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = ">=7.2.0,<8.0.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

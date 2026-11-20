@@ -12,12 +12,15 @@ from src.services.aws_s3 import s3_client
 
 import os
 
-def download_and_partition(document_id: str, document: dict): 
+def download_and_partition(document_id: str, document: dict, local_path: str | None = None):
     """
         The content type can be a URL or a file.
-            - If it is a file, download it from S3.
+            - If it is a file, download it from S3 (or read it from `local_path` if given).
             - If it is a URL, then crawl and scrape it.
         Finally, partition into elements, analyze and upload to db.
+
+        `local_path` is used by the eval scripts to ingest files already on disk.
+        That file is the source, so it is never deleted.
     """
     from src.rag.ingestion.index import logger  
     try:
@@ -48,20 +51,26 @@ def download_and_partition(document_id: str, document: dict):
             filename = document["filename"]
             file_type = filename.split(".")[-1].lower()
 
-            # Download to a temporary location
-            temp_file_path = f"/tmp/{document_id}.{file_type}"
-            logger.info("downloading_from_s3", document_id=document_id, s3_key=s3_key, file_type=file_type)
-            s3_client.download_file(app_config['s3_bucket_name'], s3_key, temp_file_path)
-            logger.info("s3_download_completed", document_id=document_id)
+            if local_path:
+                # Read the file straight from disk (eval ingestion)
+                logger.info("using_local_file", document_id=document_id, local_path=local_path, file_type=file_type)
+                elements = partition_document(local_path, file_type, source_type="file")
+            else:
+                # Download to a temporary location
+                temp_file_path = f"/tmp/{document_id}.{file_type}"
+                logger.info("downloading_from_s3", document_id=document_id, s3_key=s3_key, file_type=file_type)
+                s3_client.download_file(app_config['s3_bucket_name'], s3_key, temp_file_path)
+                logger.info("s3_download_completed", document_id=document_id)
 
-            elements = partition_document(temp_file_path, file_type, source_type="file")
+                elements = partition_document(temp_file_path, file_type, source_type="file")
 
         elements_summary = analyze_elements(elements)
         logger.info("elements_analyzed", document_id=document_id, elements_count=len(elements))
-        
 
-        # After partitioning is done, delete the temporary downloaded file
-        os.remove(temp_file_path)
+
+        # After partitioning is done, delete the temporary downloaded file (never the local source file)
+        if temp_file_path:
+            os.remove(temp_file_path)
 
         return elements, elements_summary
     

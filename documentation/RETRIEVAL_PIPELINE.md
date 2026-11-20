@@ -27,19 +27,22 @@ Because retrieval is project-configurable, the same corpus can be searched with 
 
 Retrieval behavior is controlled by `project_settings`.
 
-- `embedding_model`: embedding model used for query embedding in vector search. Default: `text-embedding-3-large`.
 - `rag_strategy`: retrieval strategy. Supported values: `basic`, `hybrid`, `multi-query-vector`, `multi-query-hybrid`. Default: `basic`.
-- `agent_type`: answer-generation agent mode (`simple` or `agentic`). Default: `agentic`.
 - `chunks_per_search`: number of chunks returned by each retrieval call. Default: `10`.
 - `final_context_size`: maximum number of chunks passed to generation. Default: `5`.
 - `similarity_threshold`: vector similarity filter threshold. Default: `0.3`.
 - `number_of_queries`: number of query variants for multi-query strategies. Default: `5`.
-- `reranking_enabled`: project-level toggle for reranking behavior.
-- `reranking_model`: configured reranker model identifier.
+- `reranking_enabled`: whether to rerank with Cohere. Default: `true`.
+- `reranking_model`: the Cohere model. Default: `rerank-english-v3.0`.
 - `vector_weight`: weight for vector results in hybrid search. Default: `0.7`.
 - `keyword_weight`: weight for keyword results in hybrid search. Default: `0.3`.
 
-Note: retrieval is strictly project-scoped. Only documents belonging to the active project are searched.
+The query is always embedded with `text-embedding-3-large` at 1,536 dimensions, the same model used at ingestion. `project_settings.embedding_model` is stored but not read.
+
+Retrieval is strictly project-scoped: only documents belonging to the active project are searched.
+
+> [!NOTE]
+> The defaults were picked by hand when the app was built. The [evaluation](EVALUATION.md) has since measured several of them; the results are noted in the sections below.
 
 ## Search Strategies
 
@@ -81,6 +84,8 @@ Example:
 - Semantic search finds incident-response sections.
 - Keyword search ensures chunks containing `P1`, `SLA`, and `DOC-442` are not missed.
 - Both signals are combined, so top results are both relevant and term-accurate.
+
+**Measured:** on the evaluation's arXiv corpus, hybrid search found no relevant chunk that vector search missed, and the 0.7/0.3 and 0.5/0.5 weightings gave identical results. Those questions are paraphrased prose, with few exact codes or names for keyword search to catch. ([Evaluation](EVALUATION.md#retrieval-sweep))
 
 ### 3. Multi-query vector search
 
@@ -172,6 +177,13 @@ the model never sees the query and the chunk together during the search. Joint q
 > [!NOTE]
 > A useful mental model is recall first, precision second. Stage 1 casts a wide and inexpensive net; Stage 2 performs deeper comparison on a small candidate set.
 
+### In KnowledgeDock
+
+- The reranker is Cohere Rerank (`rerank-english-v3.0` by default). It scores all `chunks_per_search` candidates, and the top `final_context_size` are kept.
+- If the Cohere call fails, retrieval falls back to the search order and logs a warning. The answer is still produced, just from a worse ranking.
+
+**Measured:** on the same 10 candidates, reranking raised Hit@1 from 44% to 71% and put the right chunk into the model's context for 86% of questions instead of 76%. It is the largest effect in the evaluation. It adds about 1 second of latency and about $0.002 per query at Cohere's list price. Giving the reranker 20 or 30 candidates instead of 10 found more relevant chunks, but few of them made it into the top 5. ([Evaluation](EVALUATION.md#the-reranker))
+
 ## Context Assembly
 
 After ranking, the candidate list is truncated to `final_context_size`. Selected chunks are then separated into:
@@ -192,9 +204,12 @@ Each citation includes:
 
 This allows generated answers to be traced back to the original sources.
 
+Images are passed to the model at full detail. In the evaluation they made up 87% of the generator's input tokens, so the cost of a query depends mostly on how many images its chunks contain ([Evaluation](EVALUATION.md#cost-images-dominate-the-prompt)).
+
 ## Related Docs
 
 - [Server README](../README.md)
+- [Evaluation](EVALUATION.md)
 - [API Endpoints](API_ENDPOINTS.md)
 - [Database Design](DATABASE.md)
 - [Ingestion Pipeline](INGESTION_PIPELINE.md)

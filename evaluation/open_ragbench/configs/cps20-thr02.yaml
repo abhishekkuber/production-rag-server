@@ -1,0 +1,9 @@
+# (4) Similarity threshold on its own: 0.2 instead of 0.3 with the same pool as cps20.
+# Separates the threshold effect from the pool-size effect in cps30-thr02. Compare with cps20.
+description: 20 search candidates, similarity threshold 0.2
+split: dev
+retrieval_only: true
+guardrail: false
+settings:
+  chunks_per_search: 20
+  similarity_threshold: 0.2

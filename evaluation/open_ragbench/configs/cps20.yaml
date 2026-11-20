@@ -1,0 +1,8 @@
+# Baseline: all 13 misses were gold chunks outside the 10 search candidates (rerank can't
+# recover them). Twice the candidate pool for the reranker.
+description: 20 search candidates, rerank to 5
+split: dev
+retrieval_only: false
+guardrail: false
+settings:
+  chunks_per_search: 20

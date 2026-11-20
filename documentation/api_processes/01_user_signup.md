@@ -57,9 +57,9 @@ Create an internal user row when Clerk emits a user-created event.
 
 ## Implementation Reference
 
-- Route: server/src/routes/users.py
+- Route: src/routes/users.py
 
 ## Related Docs
 
-- [Server README](../README.md)
+- [Server README](../../README.md)
 - [API Endpoints](../API_ENDPOINTS.md)

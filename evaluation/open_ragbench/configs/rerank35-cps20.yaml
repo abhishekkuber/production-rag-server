@@ -1,0 +1,9 @@
+# (C3) Newer reranker: Cohere rerank-v3.5 instead of rerank-english-v3.0, on the cps20 pool.
+# Same candidates as cps20, so any difference is the reranker's. Compare with cps20 (--paired).
+description: 20 search candidates, Cohere rerank-v3.5 to 5
+split: dev
+retrieval_only: false
+guardrail: false
+settings:
+  chunks_per_search: 20
+  reranking_model: rerank-v3.5

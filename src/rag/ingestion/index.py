@@ -83,9 +83,10 @@ def update_document_status_in_db(document_id: str, status: ProcessingStatus, det
         )
         raise Exception(f"Failed to update status in the database. Reason : {str(e)}")
 
-def process_document(document_id: str):
+def process_document(document_id: str, local_path: str | None = None):
     '''
-    Step 1 : Download the document from S3 (if it is anything other than a url), else crawl the url
+    Step 1 : Download the document from S3 (if it is anything other than a url), else crawl the url.
+             If `local_path` is given (eval ingestion), read the file from disk instead of S3.
     Step 2 : Split the content into chunks
     Step 3 : Generate chunk summaries
     Step 4 : Create chunk embeddings and store in the database.
@@ -99,7 +100,7 @@ def process_document(document_id: str):
         
         # Step 1 : Download the file / scrape based on the document type
         update_document_status_in_db(document_id=document_id, status=ProcessingStatus.PARTITIONING)
-        elements, elements_summary = download_and_partition(document_id=document_id, document=document)
+        elements, elements_summary = download_and_partition(document_id=document_id, document=document, local_path=local_path)
         logger.info("partitioning_completed", document_id=document_id, elements_summary=elements_summary)
 
         update_document_status_in_db(document_id=document_id, status=ProcessingStatus.CHUNKING, details={
