@@ -59,9 +59,9 @@ Track ingestion progress and inspect generated chunks.
 
 ## Implementation Reference
 
-- Route: server/src/routes/files.py
+- Route: src/routes/files.py
 
 ## Related Docs
 
-- [Server README](../README.md)
+- [Server README](../../README.md)
 - [API Endpoints](../API_ENDPOINTS.md)

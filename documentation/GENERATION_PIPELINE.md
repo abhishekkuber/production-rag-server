@@ -8,14 +8,15 @@ The generation pipeline converts a user message into a grounded assistant respon
 
 ![Generation pipeline](../assets/generation-pipeline.png)
 
-1. Project settings are loaded and `agent_type` is selected.
-2. Recent chat history is loaded for context.
-3. The selected agent is invoked (`simple` or `agentic`).
-4. Guardrails evaluate input safety before answer generation.
-5. The agent decides whether to call `rag_search`, `search_web`, or both.
-6. Called tools return grounded context and, for RAG, citations.
-7. The model synthesizes tool outputs into the final response.
-8. Response stream is returned as SSE events.
+1. The user's daily message quota (20 per day, counted in Redis) is checked, and the message is saved.
+2. Project settings are loaded and `agent_type` is selected.
+3. The last 10 messages of the chat are loaded for context.
+4. The selected agent is invoked (`simple` or `agentic`).
+5. Guardrails evaluate input safety before answer generation.
+6. The agent decides whether to call `rag_search`, `search_web`, or both.
+7. Called tools return grounded context and, for RAG, citations.
+8. The model synthesizes tool outputs into the final response.
+9. Response stream is returned as SSE events.
 
 ## Agent Modes
 
@@ -82,6 +83,8 @@ Guardrail output schema:
 
 If guardrail fails, generation is stopped and a rejection response is returned. If guardrail passes, agent execution continues.
 
+The guardrail adds one LLM call to every message. Its PII check is also strict: a question that names a person can be blocked even when it asks about public information.
+
 ## Prompt Construction and Response Generation
 
 How it works:
@@ -94,8 +97,23 @@ How it works:
   - text chunks
   - related tables as HTML
   - related images (base64 image inputs in multimodal message)
-- When chat history is provided, recent turns are formatted and appended to the system prompt. This enables pronoun/reference resolution in follow-up questions.
+- When chat history is provided, recent turns are formatted and appended to the system prompt. This enables pronoun/reference resolution in follow-up questions. There is no LangGraph checkpointer; the last 10 messages are the only memory.
 - The model then generates the final answer from this grounded context.
+
+### Two generation calls per answer
+
+1. Inside `rag_search`, `prepare_prompt_and_invoke_llm` (`src/rag/retrieval/utils.py`) answers from the retrieved chunks with `gpt-4o-mini`. If the chunks don't contain the answer, the prompt tells it to reply with a fixed sentence: "I don't have enough information in the provided context to answer that question."
+2. That answer goes back to the agent as a tool result, and the agent model writes the reply the user sees. The streaming route uses `gpt-4o` for the agent; the non-streaming route uses `gpt-4o-mini`.
+
+The second call lets the agent combine several tool results, or web and document results, into one reply. The cost is extra latency and tokens, and the rewrite can paraphrase away the fixed refusal sentence.
+
+### Measured
+
+The [evaluation](EVALUATION.md#answers-preliminary) scores the first call directly, without the agent and the guardrail:
+
+- 11 of 12 questions with no answer in the documents were correctly refused.
+- 9 of 112 answerable questions were refused without rerank. In 8 of the 9, the right chunk wasn't in the context, so the refusal was correct given what the model saw.
+- Images are sent at high detail and made up 87% of the input tokens. A typical answer costs about $0.0006, but one with many images in its context can cost up to $0.06.
 
 ## Streaming Path (SSE)
 
@@ -126,6 +144,8 @@ Within agent execution, tool-level exceptions are converted into structured tool
 ## Related Docs
 
 - [Server README](../README.md)
+- [Architecture](ARCHITECTURE.md)
+- [Evaluation](EVALUATION.md)
 - [API Endpoints](API_ENDPOINTS.md)
 - [Ingestion Pipeline](INGESTION_PIPELINE.md)
 - [Retrieval Pipeline](RETRIEVAL_PIPELINE.md)

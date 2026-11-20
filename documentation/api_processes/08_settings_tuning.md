@@ -1,4 +1,4 @@
-# Process 8: Retrieval and Agent Settings Tuning
+# Process 8: Retrieval and Agent Settings
 
 ## Goal
 
@@ -56,10 +56,10 @@ The update payload follows ProjectSettings model.
 
 ## Implementation Reference
 
-- Route: server/src/routes/projects.py
-- Model: server/src/models/index.py
+- Route: src/routes/projects.py
+- Model: src/models/index.py
 
 ## Related Docs
 
-- [Server README](../README.md)
+- [Server README](../../README.md)
 - [API Endpoints](../API_ENDPOINTS.md)

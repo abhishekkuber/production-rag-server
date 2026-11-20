@@ -40,10 +40,10 @@ Load all data required for the project workspace shell.
 
 ## Implementation Reference
 
-- Project routes: server/src/routes/projects.py
-- File routes: server/src/routes/files.py
+- Project routes: src/routes/projects.py
+- File routes: src/routes/files.py
 
 ## Related Docs
 
-- [Server README](../README.md)
+- [Server README](../../README.md)
 - [API Endpoints](../API_ENDPOINTS.md)

@@ -113,9 +113,9 @@ Load and manage top-level project records for the signed-in user.
 
 ## Implementation Reference
 
-- Route: server/src/routes/projects.py
+- Route: src/routes/projects.py
 
 ## Related Docs
 
-- [Server README](../README.md)
+- [Server README](../../README.md)
 - [API Endpoints](../API_ENDPOINTS.md)
