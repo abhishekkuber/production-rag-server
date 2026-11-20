@@ -10,4 +10,4 @@ echo "Starting the Supabase Local Server"
 # uvicorn src.server:app --reload --host 0.0.0.0 --port 8000
 
 # ! In case you are using Poetry 
-supabase start
+supabase start --ignore-health-check

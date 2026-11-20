@@ -61,3 +61,10 @@ htmlcov/
 
 # FastAPI specific
 .pytest_cache
+
+# Eval datasets and results (downloaded / generated, large)
+evaluation/open_ragbench/data/
+
+# Supabase CLI local state
+supabase/.branches/
+supabase/.temp/
