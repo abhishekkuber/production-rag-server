@@ -1,0 +1,10 @@
+# (C3) Multi-query with 3 queries (original + 2 variations) instead of 5. Cheaper and faster;
+# checks whether 5 queries are needed. Costs one gpt-4o-mini call per question. Compare with mq-vector-cps20.
+description: multi-query vector search (3 queries), 20 candidates
+split: dev
+retrieval_only: true
+guardrail: false
+settings:
+  rag_strategy: multi-query-vector
+  number_of_queries: 3
+  chunks_per_search: 20

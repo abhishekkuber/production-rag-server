@@ -1,0 +1,10 @@
+# (5) Control: cps20 without rerank. With rerank off the top 5 are just the top 5 of search,
+# so cps20 vs this run shows what rerank adds on a bigger pool (no-rerank does it for pool 10).
+# Not throttled by the Cohere limit, so it runs fast.
+description: 20 search candidates, rerank off (control)
+split: dev
+retrieval_only: false
+guardrail: false
+settings:
+  chunks_per_search: 20
+  reranking_enabled: false

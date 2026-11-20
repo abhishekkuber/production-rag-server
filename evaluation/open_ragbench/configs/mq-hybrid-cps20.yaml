@@ -1,0 +1,11 @@
+# (1) The fourth strategy: multi-query + hybrid. Each of the 5 queries runs vector + keyword
+# search, so the reranker sees up to 5 x 2 x 20 = 200 candidates. Costs one extra gpt-4o-mini
+# call per question and is the slowest search. Compare with mq-vector-cps20 and hybrid-cps20.
+description: multi-query hybrid search (5 queries, vector 0.7 / keyword 0.3), 20 candidates
+split: dev
+retrieval_only: true
+guardrail: false
+settings:
+  rag_strategy: multi-query-hybrid
+  number_of_queries: 5
+  chunks_per_search: 20

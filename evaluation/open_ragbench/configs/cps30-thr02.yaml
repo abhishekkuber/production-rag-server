@@ -1,0 +1,9 @@
+# The 0.3 similarity threshold already cut 3 baseline searches short (9, 9 and 1 results);
+# with 30 candidates it bites more. Lower it so the pool can actually fill up.
+description: 30 search candidates, similarity threshold 0.2
+split: dev
+retrieval_only: true
+guardrail: false
+settings:
+  chunks_per_search: 30
+  similarity_threshold: 0.2

@@ -1,0 +1,7 @@
+# Same idea as cps20, larger pool. Checks whether recall keeps rising or rerank gets noisier.
+description: 30 search candidates, rerank to 5
+split: dev
+retrieval_only: true
+guardrail: false
+settings:
+  chunks_per_search: 30

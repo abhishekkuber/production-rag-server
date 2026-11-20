@@ -1,0 +1,8 @@
+# Control: baseline without Cohere rerank, to measure how much rerank adds.
+# Rerank off -> not throttled, runs in about a minute.
+description: baseline with rerank off (control)
+split: dev
+retrieval_only: false
+guardrail: false
+settings:
+  reranking_enabled: false

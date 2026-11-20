@@ -1,0 +1,7 @@
+# Baseline: the project's DB settings unchanged (see evaluation/config.py EVAL_PROJECT_SETTINGS).
+# Copy this file to start a new experiment; the file name becomes the run name.
+description: app defaults (basic vector search, Cohere rerank, 10 candidates, 5 in context)
+split: dev
+retrieval_only: false
+guardrail: false
+settings: {}
